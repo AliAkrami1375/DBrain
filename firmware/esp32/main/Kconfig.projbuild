@@ -1,0 +1,112 @@
+menu "DBrain"
+
+    config DBRAIN_CLUSTER_ID
+        int "Cluster id"
+        range 1 65535
+        default 1
+        help
+            Nodes only talk to nodes with the same cluster id. Can be changed at
+            runtime with `set cluster <id>` (stored in NVS).
+
+    config DBRAIN_CHANNEL
+        int "Wi-Fi channel"
+        range 1 13
+        default 1
+        help
+            Every node of a cluster must sit on the same channel. Nodes never
+            associate to an access point.
+
+    choice DBRAIN_MODE
+        prompt "Where the shard comes from"
+        default DBRAIN_MODE_RECIPE
+        config DBRAIN_MODE_RECIPE
+            bool "Recipe: the network is derived from a recipe broadcast by the coordinator"
+        config DBRAIN_MODE_ARTIFACT
+            bool "Artifact: run the shard image in the artifact partition"
+    endchoice
+
+    choice DBRAIN_PHY_RATE
+        prompt "Preferred PHY rate when no ESP8266 is in the cluster"
+        default DBRAIN_RATE_1M
+        config DBRAIN_RATE_1M
+            bool "1 Mbps (compatible with every chip)"
+        config DBRAIN_RATE_6M
+            bool "6 Mbps"
+        config DBRAIN_RATE_24M
+            bool "24 Mbps"
+        config DBRAIN_RATE_54M
+            bool "54 Mbps"
+    endchoice
+
+    config DBRAIN_SLOT_EVENTS
+        int "Events a transmission slot is sized for"
+        range 1 119
+        default 32
+
+    config DBRAIN_MIN_PERIOD_US
+        int "Minimum tick period in microseconds"
+        range 1000 1000000
+        default 1000
+        help
+            One biological millisecond takes at least this long on the wall
+            clock. The coordinator lengthens the tick further when the slot
+            schedule needs it.
+
+    config DBRAIN_TX_LATENCY_US
+        int "Beacon send-callback latency in microseconds"
+        range 0 65535
+        default 0
+        help
+            Time between a beacon leaving the air and the send callback that
+            timestamps it. Measured in phase 2 of the roadmap; receivers
+            subtract it. Zero keeps the constant bias, which only shifts the
+            coordinator relative to everyone else.
+
+    config DBRAIN_DISCOVER_MS
+        int "Listen for an existing cluster this long before forming one (ms)"
+        range 1000 60000
+        default 5000
+
+    config DBRAIN_MAX_NEURONS
+        int "Neuron capacity of the working memory"
+        range 16 65535
+        default 2000
+        help
+            Sizes the arena holding neuron state and delay buckets (74 bytes
+            per neuron). Shards larger than this are rejected.
+
+    config DBRAIN_IMAGE_KB
+        int "Image buffer size in KB"
+        range 16 8192
+        default 512
+        help
+            RAM for a shard image built from the recipe or transferred over
+            the control plane. Placed in PSRAM when present.
+
+    config DBRAIN_STREAM_DEFAULT
+        bool "Stream events as JSON lines on the console at boot"
+        default n
+
+    menu "Recipe defaults (used when this node forms a cluster)"
+        config DBRAIN_RECIPE_SEED
+            int "Seed"
+            default 1
+        config DBRAIN_RECIPE_TOPOLOGY
+            int "Topology: 0 random, 1 spatial, 2 synfire"
+            range 0 2
+            default 0
+        config DBRAIN_RECIPE_LOCAL_FAN_IN
+            int "On-board synapses per neuron"
+            range 0 255
+            default 20
+        config DBRAIN_RECIPE_REMOTE_FAN_IN
+            int "Off-board synapses per neuron, in total"
+            range 0 255
+            default 10
+        config DBRAIN_RECIPE_DRIVE
+            int "Peak of the per-tick random input, in 1/128"
+            range 0 65535
+            default 1536
+    endmenu
+
+endmenu

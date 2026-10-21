@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DBrain dashboard</title>
+<style>
+  :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+  body { margin: 0; padding: 16px; background: #111; color: #ddd; }
+  h1 { font-size: 18px; margin: 0 0 12px; }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .card { background: #1b1b1b; border: 1px solid #333; border-radius: 6px; padding: 12px; min-width: 280px; flex: 1; }
+  canvas { width: 100%; height: 260px; background: #000; border-radius: 4px; display: block; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; padding: 3px 6px; border-bottom: 1px solid #2a2a2a; }
+  .k { color: #8ab; } .ok { color: #7c7; } .bad { color: #e66; }
+  input { background: #222; color: #ddd; border: 1px solid #444; padding: 4px 6px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>DBrain cluster <span id="conn" class="bad">(disconnected)</span></h1>
+<div class="row">
+  <div class="card" style="flex:2">
+    <div>Spike raster <span class="k" id="rate"></span></div>
+    <canvas id="raster" width="900" height="260"></canvas>
+  </div>
+  <div class="card">
+    <div>Gateway node</div>
+    <table id="status"></table>
+  </div>
+</div>
+<div class="row" style="margin-top:16px">
+  <div class="card">
+    <div>Members</div>
+    <table id="members"><thead><tr><th>id</th><th>chip</th><th>tier</th><th>live</th><th>state</th><th>shard</th><th>neurons</th><th>tick</th><th>drops</th></tr></thead><tbody></tbody></table>
+  </div>
+  <div class="card">
+    <div>WebSocket <input id="url" value="ws://127.0.0.1:8765" size="28"> <button onclick="connect()">connect</button></div>
+    <pre id="log" style="height:200px;overflow:auto;font-size:12px"></pre>
+  </div>
+</div>
+<script>
+const raster = document.getElementById('raster'), ctx = raster.getContext('2d');
+const colors = ['#7cf','#fc7','#7f7','#f7c','#c7f','#ff7','#7ff','#f77'];
+let col = 0, spikesThisSecond = 0;
+const members = {};
+function log(s) { const el = document.getElementById('log'); el.textContent = (s + '\n' + el.textContent).slice(0, 4000); }
+function plot(ev) {
+  const n = ev.n || (ev.idx ? ev.idx.length : 0);
+  spikesThisSecond += n;
+  const color = colors[ev.node % colors.length];
+  ctx.fillStyle = color;
+  if (ev.idx) { for (const i of ev.idx) ctx.fillRect(col, 259 - (i % 260), 1, 1); }
+  else { ctx.fillRect(col, 259 - Math.min(259, n * 4), 1, Math.min(259, n * 4)); }
+}
+function nextColumn() { col = (col + 1) % raster.width; ctx.clearRect(col, 0, 2, raster.height); }
+function status(ev) {
+  const keys = ['node','state','epoch','coordinator','tick','period_us','shard','neurons','bundles_tx','bundles_rx','events_applied','events_late','events_early','seq_gaps','overruns','resyncs','sync_residual_us'];
+  document.getElementById('status').innerHTML = keys.map(k => `<tr><td class="k">${k}</td><td>${ev[k]}</td></tr>`).join('');
+  const tb = document.querySelector('#members tbody');
+  tb.innerHTML = (ev.members || []).map(m => `<tr><td>${m.id}</td><td>${m.chip}</td><td>${m.tier}</td><td class="${m.liveness==1?'ok':'bad'}">${['','alive','suspect','dead'][m.liveness]||m.liveness}</td><td>${['boot','discover','joining','member','coordinator'][m.state]||m.state}</td><td>${m.shard}</td><td>${m.neurons}</td><td>${m.tick}</td><td>${m.drops}</td></tr>`).join('');
+}
+let lastTick = -1;
+function handle(line) {
+  let ev; try { ev = JSON.parse(line); } catch (e) { return; }
+  if (ev.ev === 'spikes') { if (ev.tick !== lastTick) { nextColumn(); lastTick = ev.tick; } plot(ev); }
+  else if (ev.ev === 'status') status(ev);
+  else log(line);
+}
+setInterval(() => { document.getElementById('rate').textContent = spikesThisSecond + ' spikes/s'; spikesThisSecond = 0; }, 1000);
+let ws;
+function connect() {
+  if (ws) ws.close();
+  ws = new WebSocket(document.getElementById('url').value);
+  ws.onopen = () => { document.getElementById('conn').textContent = '(connected)'; document.getElementById('conn').className = 'ok'; };
+  ws.onclose = () => { document.getElementById('conn').textContent = '(disconnected)'; document.getElementById('conn').className = 'bad'; };
+  ws.onmessage = m => handle(m.data);
+}
+connect();
+</script>
+</body>
+</html>

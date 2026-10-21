@@ -1,0 +1,27 @@
+# host builds
+build/
+build-*/
+cmake-build-*/
+*.o
+*.a
+*.so
+
+# python
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.venv/
+host/build/
+
+# esp-idf / esp8266 rtos sdk
+firmware/*/build/
+firmware/*/sdkconfig
+firmware/*/sdkconfig.old
+firmware/*/managed_components/
+firmware/*/dependencies.lock
+
+# editors / os
+.vscode/
+.idea/
+.DS_Store

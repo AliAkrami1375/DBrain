@@ -96,22 +96,57 @@ The end state we are building toward — the complete platform:
 4. **Scale-out:** a documented, reproducible 40-board reference cluster —
    the largest radio-linked spiking network built to date.
 
-## Status & roadmap
+## Repository
 
-The research phase is **complete**; the team is actively working through implementation.
+| Path | What it is |
+|---|---|
+| [`core/`](core/) | Portable C99 core: fixed-point neurons and synapses, spike bundles, membership, election, clock synchronization, transmission slots, control plane, recipe networks, the node agent |
+| [`firmware/esp32/`](firmware/esp32/) | ESP-IDF v5.5 firmware for ESP32, S2, S3, C2, C3, C5, C6 |
+| [`firmware/esp8266/`](firmware/esp8266/) | ESP8266 RTOS SDK v3.4 firmware |
+| [`sim/`](sim/) | Virtual radio cell: real node agents on the host, with loss, collisions, clock skew and receiver spread |
+| [`host/`](host/) | `dbrain` Python tools: network compiler, bit-exact reference simulator, gateway and dashboard |
+| [`tests/`](tests/) | C unit and integration tests |
+| [`docs/`](docs/) | Technical documentation |
+
+## Documentation
+
+- [Architecture](docs/architecture.md) — modules, node states, cluster behaviour, memory, failure handling
+- [Wire protocol](docs/protocol.md) — every frame byte by byte, synchronization, slot plan
+- [Simulation core](docs/simulation-core.md) — the exact arithmetic, neuron models, delivery rules, recipe derivation
+- [Shard images](docs/artifacts.md) — the compiled artifact format
+- [Firmware](docs/firmware.md) — building, flashing, configuration, console, event stream, benchmark
+- [Host tools](docs/host-tools.md) — describing, compiling, running and observing networks
+- [Testing](docs/testing.md) — what is verified and how
+- [Research and design](docs/research.md) — the feasibility study behind every number
+
+## Building and testing
+
+```
+cmake -S . -B build -G Ninja && cmake --build build     # core, simulator, tests (host)
+ctest --test-dir build                                   # 11 C test programs
+pip install -e host && python -m pytest host/tests       # 12 Python tests, bit-exact against the core
+build/sim/dbrain-sim --nodes 4 --chips esp32c3,esp32s3,esp32,esp32 --seconds 15
+```
+
+Firmware: `cd firmware/esp32 && idf.py set-target esp32s3 && idf.py build flash monitor`
+(ESP-IDF v5.5); `cd firmware/esp8266 && idf.py build flash monitor` (ESP8266 RTOS SDK v3.4).
+See [docs/firmware.md](docs/firmware.md).
+
+## Status & roadmap
 
 | Phase | Deliverable | Status |
 |---|---|---|
 | Research | Full feasibility study & system design | ✅ Complete |
-| 0 — Transport | Radio benchmark suite, measured channel limits | 🔨 In progress |
-| 1 — First spikes | Two boards, one network, spikes over the air | Planned |
-| 2 — Time | Sub-tick synchronization + TDMA slotting | Planned |
-| 3 — Self-organization | Live join/leave, election, failure recovery | Planned |
-| 4 — Compiler | Define networks on a PC, deploy to the cluster | Planned |
-| 5 — Dashboard | Live rasters, heatmaps, telemetry in the browser | Planned |
-| 6 — Learning | STDP plasticity, rebalancing, OTA updates | Planned |
-
-Code lands in this repository as each phase completes.
+| Core | Simulation engine, protocol, membership, election, sync, slots, control plane, recipe networks, node agent; host simulator; 23 test programs | ✅ Complete |
+| Firmware | ESP-IDF build for the whole ESP32 family and ESP8266 RTOS SDK build, console, event stream, benchmark | ✅ Compiles for every target; hardware measurements pending |
+| Host tools | Network compiler, reference simulator, gateway, dashboard, flashing | ✅ Complete |
+| 0 — Transport | Measured channel limits on real boards (`bench`) | Measurement pending |
+| 1 — First spikes | Two boards, synfire ring over the air | Measurement pending |
+| 2 — Time | Measured sync residual, `tx_latency_us` | Measurement pending |
+| 3 — Self-organization | Join/leave/election on real boards | Measurement pending |
+| 4 — Compiler | Compiled network on boards vs host reference | Measurement pending |
+| 5 — Dashboard | Live rasters from a real cluster | Measurement pending |
+| 6 — Learning | STDP, rebalancing, OTA | Planned |
 
 ---
 

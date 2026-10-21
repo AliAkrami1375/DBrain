@@ -1,0 +1,5 @@
+[
+  {"node_id": 1, "chip": "esp32s3", "free_heap": 250000, "psram": 4194304},
+  {"node_id": 2, "chip": "esp32", "free_heap": 250000},
+  {"node_id": 3, "chip": "esp32c3", "free_heap": 200000, "max_neurons": 1000, "image_bytes": 1048576}
+]
